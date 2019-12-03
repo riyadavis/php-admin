@@ -110,6 +110,99 @@ class AdminDatabase extends CI_Model {
         }
     }
 
+    public function totalNoOrders()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $totalNo = $this->db->get('customer_order')->num_rows();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get total no. orders Failed"];
+        }
+    }
+    public function totalNoAcceptedOrders()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $this->db->where('Accepted','true');
+            $totalNo = $this->db->get('customer_order')->num_rows();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get total no. Accepted orders Failed"];
+        }
+    }
+    public function totalNoPendingOrders()
+    {
+        $whereClause = array('Accepted'=>'false',
+        'Cancelled'=>'false');
+        $this->db->trans_start();
+            $this->db->select('*');
+            $this->db->where($whereClause);
+            $totalNo = $this->db->get('customer_order')->num_rows();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get total no. Pending orders Failed"];
+        }
+    }
+    public function totalNoCancelledOrders()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $this->db->where('Cancelled','true');
+            $totalNo = $this->db->get('customer_order')->num_rows();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get total no. Cancelled orders Failed"];
+        }
+    }
     public function searchProduct($search)
     {
         $this->db->trans_start();
@@ -136,7 +229,281 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"get search data Failed"];
         }
     }
+    public function searchOrder($search)
+    {
+        $this->db->trans_start();
+            $this->db->where('id',$search);
+            $searchData = $this->db->get('customer_order')->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($searchData)
+            {
+                return $searchData;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get search data Failed"];
+        }
+    }
+    public function searchCashFloat($search)
+    {
+        $this->db->trans_start();
+            $this->db->where('id',$search)->or_where('order_id',$search);
+            $searchData = $this->db->get('floating_cash')->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($searchData)
+            {
+                return $searchData;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get search data Failed"];
+        }
+    }
 
+    public function floatingCash($distId)
+    {
+        $this->db->trans_start();
+            $this->db->where('dist_id',$distId);
+            $this->db->where_not_in('hub_status',"amount sent");
+            $this->db->select_sum('amount');
+           $amount = $this->db->get('floating_cash')->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            return ["error"=> $amount];
+        }
+        else
+        {
+            return ["error"=>"Failed to Process Floating cash"];
+        }
+    }
+
+    public function totalNoSentFloatingCash()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $this->db->where('hub_status','Amount Sent');
+            $totalNo = $this->db->get('floating_cash')->num_rows();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get total no. sent Floatingcash Failed"];
+        }
+    }
+    public function totalNoPendingFloatingCash()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $this->db->where('hub_status','Pending');
+            $totalNo = $this->db->get('floating_cash')->num_rows();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get total no. Pending Floatingcash Failed"];
+        }
+    }
+    public function totalNoReceivedFloatingCash()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $this->db->where('hub_status','Amount Received');
+            $totalNo = $this->db->get('floating_cash')->num_rows();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get total no. Received Floatingcash Failed"];
+        }
+    }
+
+    public function totalNoFloatingCash()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $totalNo = $this->db->get('floating_cash')->num_rows();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get total no. floating cash Failed"];
+        }
+    }
+    public function viewReceivedFloatingCash()
+    {
+        $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
+        $noOfValue = 8;
+        $offset = ($pageNo - 1)* $noOfValue;       
+        $this->db->trans_start();
+        $receivedCash = $this->db->select('*')
+                                 ->from('floating_cash')
+                                 ->order_by('time_stamp', 'DESC')
+                                 ->limit($noOfValue, $offset)
+                                 ->where('hub_status','Amount Received')
+                                 ->get()
+                                 ->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($receivedCash)
+            {
+                return $receivedCash;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"View Received Floatingcash  Failed"];
+        }
+    }
+    public function viewPendingFloatingCash()
+    {
+        $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
+        $noOfValue = 8;
+        $offset = ($pageNo - 1)* $noOfValue;       
+        $this->db->trans_start();
+        $pendingCash = $this->db->select('*')
+                                 ->from('floating_cash')
+                                 ->order_by('time_stamp', 'DESC')
+                                 ->limit($noOfValue, $offset)
+                                 ->where('hub_status','Pending')
+                                 ->get()
+                                 ->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($pendingCash)
+            {
+                return $pendingCash;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"View Pending Floatingcash  Failed"];
+        }
+    }
+
+    public function viewSentFloatingCash()
+    {
+        $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
+        $noOfValue = 8;
+        $offset = ($pageNo - 1)* $noOfValue;       
+        $this->db->trans_start();
+        $cashSent = $this->db->select('*')
+                                 ->from('floating_cash')
+                                 ->order_by('time_stamp', 'DESC')
+                                 ->limit($noOfValue, $offset)
+                                 ->where('hub_status','Amount Sent')
+                                 ->get()
+                                 ->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($cashSent)
+            {
+                return $cashSent;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"View sent Floatingcash  Failed"];
+        }
+    }
+    public function viewAllFloatingCash()
+    {
+        $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
+        $noOfValue = 8;
+        $offset = ($pageNo - 1)* $noOfValue;       
+        $this->db->trans_start();
+            $allFloatingCash = $this->db->select('*')
+                                 ->from('floating_cash')
+                                 ->order_by('time_stamp', 'DESC')
+                                 ->limit($noOfValue, $offset)
+                                 ->get()
+                                 ->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($allFloatingCash)
+            {
+                return $allFloatingCash;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"View All Floating cash Failed"];
+        }
+    }
     public function viewAllProducts()
     {
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
@@ -161,7 +528,7 @@ class AdminDatabase extends CI_Model {
             }
             else
             {
-                return ["error"=>"No Products"];
+                return ["error"=>"no rows"];
             }
         }
         else
@@ -171,9 +538,9 @@ class AdminDatabase extends CI_Model {
     }
     public function viewAllOrders()
     {
-        $pageNo = $this->input->get('page') ? $this->input->get('page') : 0;
-        $noOfValue = 16;
-        $offset = 0;        
+        $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
+        $noOfValue = 8;
+        $offset = ($pageNo - 1)* $noOfValue;       
         $this->db->trans_start();
             $allOrder = $this->db->select('*')
                                  ->from('customer_order')
@@ -190,7 +557,7 @@ class AdminDatabase extends CI_Model {
             }
             else
             {
-                return ["error"=>"No orders"];
+                return ["error"=>"no rows"];
             }
         }
         else
@@ -201,10 +568,17 @@ class AdminDatabase extends CI_Model {
 
     public function viewAcceptedOrders()
     {
+        $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
+        $noOfValue = 8;
+        $offset = ($pageNo - 1)* $noOfValue;       
         $this->db->trans_start();
-                $this->db->order_by('time_stamp','DESC');
-                $this->db->where('Accepted','true');
-            $acceptedOrders = $this->db->get('customer_order')->result_array();
+        $acceptedOrders = $this->db->select('*')
+                                 ->from('customer_order')
+                                 ->order_by('time_stamp', 'DESC')
+                                 ->limit($noOfValue, $offset)
+                                 ->where('Accepted','true')
+                                 ->get()
+                                 ->result_array();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
         {
@@ -214,7 +588,7 @@ class AdminDatabase extends CI_Model {
             }
             else
             {
-                return ["error"=>"No Accepted orders"];
+                return ["error"=>"no rows"];
             }
         }
         else
@@ -225,11 +599,19 @@ class AdminDatabase extends CI_Model {
 
     public function viewCancelledOrders()
 	{
+        $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
+        $noOfValue = 8;
+        $offset = ($pageNo - 1)* $noOfValue;       
         $this->db->trans_start();
-            $this->db->order_by('time_stamp','DESC');
-            $this->db->where('Cancelled','true');
-            $cancelledOrders = $this->db->get('customer_order')->result_array();
+        $cancelledOrders= $this->db->select('*')
+                                 ->from('customer_order')
+                                 ->order_by('time_stamp', 'DESC')
+                                 ->limit($noOfValue, $offset)
+                                 ->where('Cancelled','true')
+                                 ->get()
+                                 ->result_array();
         $this->db->trans_complete();
+       
         if($this->db->trans_status() === true)
         {
             if($cancelledOrders)
@@ -238,7 +620,7 @@ class AdminDatabase extends CI_Model {
             }
             else
             {
-                return ["error"=>"No Cancelled Orders"];
+                return ["error"=>"no rows"];
             }
         }
         else
@@ -251,11 +633,19 @@ class AdminDatabase extends CI_Model {
     {
         $whereClause = array('Accepted'=>'false',
                             'Cancelled'=>'false');
+        $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
+        $noOfValue = 8;
+        $offset = ($pageNo - 1)* $noOfValue;       
         $this->db->trans_start();
-            $this->db->order_by('time_stamp','DESC');
-            $this->db->where($whereClause);
-            $pendingOrders = $this->db->get('customer_order')->result_array();
+        $pendingOrders = $this->db->select('*')
+                                    ->from('customer_order')
+                                    ->order_by('time_stamp', 'DESC')
+                                    ->limit($noOfValue, $offset)
+                                    ->where($whereClause)
+                                    ->get()
+                                    ->result_array();
         $this->db->trans_complete();
+        
         if($this->db->trans_status() === true)
         {
             if($pendingOrders)
@@ -264,7 +654,7 @@ class AdminDatabase extends CI_Model {
             }
             else
             {
-                return ["error"=>"No Pending Orders"];
+                return ["error"=>"no rows"];
             }
         }
         else
@@ -309,21 +699,69 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function floatingCash($distId)
+    public function getNotifications()
     {
         $this->db->trans_start();
-            $this->db->where('dist_id',$distId);
-            $this->db->where_not_in('hub_status',"amount sent");
-            $this->db->select_sum('amount');
-           $amount = $this->db->get('floating_cash')->result_array();
+            $this->db->where('received_status','false');
+            $this->db->order_by('time_stamp','DESC');
+            $this->db->limit(5, 0);
+            $notifications = $this->db->get('notification')->result_array();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
         {
-            return ["error"=> $amount];
+            if($notifications)
+            {
+                return $notifications;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
         }
         else
         {
-            return ["error"=>"Failed to Process Floating cash"];
+            return ["error"=>true, "reson"=>"Database Error"];
+        }
+    }
+
+    public function viewMoreNotifications()
+    {
+        $this->db->trans_start();
+            $this->db->order_by('time_stamp','DESC');
+            $this->db->limit(20, 0);
+            $notifications = $this->db->get('notification')->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($notifications)
+            {
+                return $notifications;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>true, "reson"=>"Database Error"];
+        }
+    }
+
+    public function updateNotificationStatus($notificationId)
+    {
+        $this->db->trans_start();
+            $this->db->where('id',$notificationId);
+            $this->db->set('received_status','true');
+            $this->db->update('notification');
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            return ["error"=>"Notification updated"];
+        }
+        else
+        {
+            return ["error"=>"Failed to update"];
         }
     }
 
@@ -337,6 +775,12 @@ class AdminDatabase extends CI_Model {
                     ->order_by('time_stamp','ASC')
                     ->get('customer_order')
                     ->result_array();
+        if(sizeof($result)==0){
+            return array(
+                'lineChart' => false,
+                'pieChart' => false
+            );
+        }
         foreach($result as &$item){
             $date = new DateTime($item['time_stamp']);
             $item['time_stamp'] = $date->format('Y-m-d'); //key for linechart

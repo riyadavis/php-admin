@@ -13,6 +13,7 @@ class AdminApi extends CI_Controller {
 
 	public function index()
 	{
+		echo FCPATH.'assets/images';
 		
 	}
 
@@ -27,7 +28,7 @@ class AdminApi extends CI_Controller {
 
 	public function addProduct()
 	{
-		$config['upload_path'] = './assets/images/';
+		$config['upload_path'] = FCPATH.'assets/images/';
         $config['allowed_types'] = 'gif|jpg|png';
         $config['max_size'] = 2000;
         $config['max_width'] = 1500;
@@ -35,7 +36,7 @@ class AdminApi extends CI_Controller {
 
         $this->load->library('upload', $config);
 
-		if (!$this->upload->do_upload('image'))
+		if (!$this->upload->do_upload('product_image'))
 		{
             $error['items'] = array('error' => $this->upload->display_errors());
 
@@ -60,14 +61,19 @@ class AdminApi extends CI_Controller {
 
 	public function deleteProduct()
 	{
-		$deleteId = $this->input->post('productId');
+		// echo json_encode($_GET);
+		$deleteId = $this->input->get('productId');
+		$file = $this->input->post('delete_image');
+		// echo json_encode($file);
+		
+				unlink(FCPATH.'assets/images/'.$file);
+		
 		$data['items'] = $this->AdminDatabase->deleteProduct($deleteId);
 		$this->load->view('API/json_data',$data);
 	}
-
 	public function updateProduct()
 	{
-		$updateId = $this->input->post('productId');
+		$updateId = $this->input->post('id');
 
 		$config['upload_path'] = './assets/images/';
         $config['allowed_types'] = 'gif|jpg|png';
@@ -77,14 +83,32 @@ class AdminApi extends CI_Controller {
 
         $this->load->library('upload', $config);
 
-		if (!$this->upload->do_upload('image'))
+		if (!$this->upload->do_upload('product_image'))
 		{
-            $error['items'] = array('error' => $this->upload->display_errors());
+            // $error['items'] = array('error' => $this->upload->display_errors());
 
-            $this->load->view('API/json_data', $error);
+			// $this->load->view('API/json_data', $error);
+			
+			$product = array('category_id'=>$this->input->post('category_id'),
+							'dist_id'=>$this->input->post('dist_id'),
+							'product_name'=>$this->input->post('product_name'),
+							'product_price'=>$this->input->post('product_price'),
+							'max_discount'=>$this->input->post('max_discount'),
+							'min_discount'=>$this->input->post('min_discount'),
+							'product_tags'=>$this->input->post('product_tags')
+							);
+			$data['items'] = $this->AdminDatabase->updateProduct($updateId,$product);
+			$this->load->view('API/json_data',$data);
 		} 
 		else
 		{
+			// echo json_encode($_POST);
+			$file = $this->input->post('previous_image');
+			if($file)
+			{
+				unlink(FCPATH.'assets/images/'.$file);
+			}
+
 			$imageData = array('image_metadata' => $this->upload->data());
 			$product = array('category_id'=>$this->input->post('category_id'),
 							'dist_id'=>$this->input->post('dist_id'),
@@ -99,10 +123,24 @@ class AdminApi extends CI_Controller {
 			$this->load->view('API/json_data',$data);
 		}
 	}
+	
 	public function searchProduct()
 	{
 		$search =  $this->input->get('search');
 		$data['items'] = $this->AdminDatabase->searchProduct($search);
+		$this->load->view('API/json_data',$data);
+	}
+
+	public function searchOrder()
+	{
+		$search =  $this->input->get('search');
+		$data['items'] = $this->AdminDatabase->searchOrder($search);
+		$this->load->view('API/json_data',$data);
+	}
+	public function searchCashFloat()
+	{
+		$search =  $this->input->get('search');
+		$data['items'] = $this->AdminDatabase->searchCashFloat($search);
 		$this->load->view('API/json_data',$data);
 	}
 
@@ -120,6 +158,26 @@ class AdminApi extends CI_Controller {
 	public function totalNoProducts()
 	{
 		$data['items'] = $this->AdminDatabase->totalNoProducts();
+		$this->load->view('API/json_data',$data);
+	}
+	public function totalNoOrders()
+	{
+		$data['items'] = $this->AdminDatabase->totalNoOrders();
+		$this->load->view('API/json_data',$data);
+	}
+	public function totalNoAcceptedOrders()
+	{
+		$data['items'] = $this->AdminDatabase->totalNoAcceptedOrders();
+		$this->load->view('API/json_data',$data);
+	}
+	public function totalNoPendingOrders()
+	{
+		$data['items'] = $this->AdminDatabase->totalNoPendingOrders();
+		$this->load->view('API/json_data',$data);
+	}
+	public function totalNoCancelledOrders()
+	{
+		$data['items'] = $this->AdminDatabase->totalNoCancelledOrders();
 		$this->load->view('API/json_data',$data);
 	}
 	public function viewAllOrders()
@@ -173,12 +231,72 @@ class AdminApi extends CI_Controller {
 		$data['items'] = $this->AdminDatabase->floatingCash($distId);
 		$this->load->view('API/json_data',$data);
 	}
+	public function totalNoFloatingCash()
+	{
+		$data['items'] = $this->AdminDatabase->totalNoFloatingCash();
+		$this->load->view('API/json_data',$data);
+	}
+	public function totalNoSentFloatingCash()
+	{
+		$data['items'] = $this->AdminDatabase->totalNoSentFloatingCash();
+		$this->load->view('API/json_data',$data);
+	}
+	public function totalNoPendingFloatingCash()
+	{
+		$data['items'] = $this->AdminDatabase->totalNoPendingFloatingCash();
+		$this->load->view('API/json_data',$data);
+	}
 
+	public function totalNoReceivedFloatingCash()
+	{
+		$data['items'] = $this->AdminDatabase->totalNoReceivedFloatingCash();
+		$this->load->view('API/json_data',$data);
+	}
+
+	public function viewAllFloatingCash()
+	{
+		$data['items'] = $this->AdminDatabase->viewAllFloatingCash();
+		$this->load->view('API/json_data',$data);
+	}
+	public function viewSentFloatingCash()
+	{
+		$data['items'] = $this->AdminDatabase->viewSentFloatingCash();
+		$this->load->view('API/json_data',$data);
+	}
+	public function viewPendingFloatingCash()
+	{
+		$data['items'] = $this->AdminDatabase->viewPendingFloatingCash();
+		$this->load->view('API/json_data',$data);
+	}
+	public function viewReceivedFloatingCash()
+	{
+		$data['items'] = $this->AdminDatabase->viewReceivedFloatingCash();
+		$this->load->view('API/json_data',$data);
+	}
 	public function analytics()
 	{
         $startDate = $this->input->get('startDate');
 		$endDate = $this->input->get('endDate');	
 		$data['items'] = $this->AdminDatabase->analytics($startDate, $endDate);
 		$this->load->view('API/json_data',$data);		
+	}
+
+	public function getNotifications()
+	{
+		$data['items'] = $this->AdminDatabase-> getNotifications();
+		$this->load->view('API/json_data',$data);
+	}
+
+	public function viewMoreNotifications()
+	{
+		$data['items'] = $this->AdminDatabase-> viewMoreNotifications();
+		$this->load->view('API/json_data',$data);
+	}
+
+	public function updateNotificationStatus()
+	{
+		$notificationId = $this->input->get('id');
+		$data['items'] = $this->AdminDatabase-> updateNotificationStatus($notificationId);
+		$this->load->view('API/json_data',$data);
 	}
 }
