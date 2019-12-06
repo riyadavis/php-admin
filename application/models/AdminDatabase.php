@@ -6,15 +6,38 @@ class AdminDatabase extends CI_Model {
     public function adminLogin($loginDetails)
     { 
         $this->db->trans_start();
+                            $this->db->select('id');
             $loginStatus = $this->db->get_where('admin',$loginDetails)->result();
         $this->db->trans_complete();
         if($loginStatus)
         {
-            return ["error"=>"Login Successful"];
+            return $loginStatus;
         }
         else
         {
             return ["error"=>"Login Failed"];
+        }
+    }
+
+    public function adminProfile($userId)
+    { 
+        $this->db->trans_start();
+            $profileData = $this->db->get_where('admin',$userId)->result();
+        $this->db->trans_complete();
+        $url = "http://localhost/Admin/assets/images/".$userId['id']."/";
+        
+        foreach($profileData as &$val)
+        {
+            $val->profile_image = $url.$val->profile_image;
+        }
+        
+        if($profileData)
+        {
+            return $profileData;
+        }
+        else
+        {
+            return ["error"=>"Failed to Fetch Admin Details"];
         }
     }
 
@@ -33,6 +56,21 @@ class AdminDatabase extends CI_Model {
         }
     }
 
+    public function categoryDetailsAddProduct()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $category = $this->db->get('category')->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            return $category;
+        }
+        else
+        {
+            return ["error"=>"Add Product Failed"];
+        }
+    }
     public function deleteProduct($deleteId)
     {
         $this->db->trans_start();
@@ -54,12 +92,15 @@ class AdminDatabase extends CI_Model {
             $this->db->select('*');
             $this->db->where('id',$productId);
          $productDetails =  $this->db->get('product')->result_array();
+            $this->db->select('*');
+         $category = $this->db->get('category')->result_array();
+         $result = array('productDetails'=>$productDetails, 'category'=>$category);
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
         {
             if($productDetails)
             {
-                return $productDetails;
+                return $result;
             }
             else
             {
@@ -87,6 +128,46 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"Update Product Failed"];
         }
     }
+
+    public function getCouponDetails()
+    {
+        $this->db->trans_start();
+            $this->db->select('*');
+            $this->db->order_by('time_stamp','DESC');
+            $totalNo = $this->db->get('coupon')->result_array();
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            if($totalNo)
+            {
+                return $totalNo;
+            }
+            else
+            {
+                return ["error"=>"no rows"];
+            }
+        }
+        else
+        {
+            return ["error"=>"get Coupon Failed"];
+        }
+    }
+
+    public function couponSubscribe($coupon)
+    {
+        $this->db->trans_start();
+            $this->db->insert('distributor_coupon_subscription',$coupon);
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            return ["error"=>"Coupon Subscribed"];
+        }
+        else
+        {
+            return ["error"=>"Coupon Subscription Failed"];
+        }
+    }
+
     public function totalNoProducts()
     {
         $this->db->trans_start();
@@ -720,7 +801,7 @@ class AdminDatabase extends CI_Model {
         }
         else
         {
-            return ["error"=>true, "reson"=>"Database Error"];
+            return ["error"=>true, "reason"=>"Database Error"];
         }
     }
 
@@ -744,7 +825,7 @@ class AdminDatabase extends CI_Model {
         }
         else
         {
-            return ["error"=>true, "reson"=>"Database Error"];
+            return ["error"=>true, "reason"=>"Database Error"];
         }
     }
 

@@ -6,29 +6,48 @@ class AdminApi extends CI_Controller {
 	{
 		parent :: __construct();
 		header("Access-Control-Allow-Origin: *");
+		header("Access-Control-Allow-Headers: *");
         header('Access-Control-Allow-Credentials: true');    
-        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+		header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 		$this->load->model('AdminDatabase');	
 	}
 
 	public function index()
 	{
-		echo FCPATH.'assets/images';
+		// echo FCPATH.'assets/images';
+		// echo json_encode($this->input->request_headers()); //array of headers
+		$auth = $this->input->get_request_header('Authorization', true);
+		$auth = explode(':', $auth);
+		echo json_encode($auth);
+		// print_r( apache_request_headers());
 		
 	}
 
 	public function adminLogin()
 	{
-		$loginDetails = array('userName'=>$this->input->post('username'),
+		$loginDetails = array('userName'=>$this->input->post('userName'),
 								'password'=>$this->input->post('password')
 							);
 		$data['items'] = $this->AdminDatabase->adminLogin($loginDetails);
 		$this->load->view('API/json_data',$data);
 	}
 
+	public function adminProfile()
+	{
+		$userId = array('id' => $this->input->post('userId'));
+		$data['items'] = $this->AdminDatabase->adminProfile($userId);
+		$this->load->view('API/json_data',$data);
+	}
+
 	public function addProduct()
 	{
-		$config['upload_path'] = FCPATH.'assets/images/';
+		$userId = $this->input->post('userId');
+		if(!is_dir(FCPATH.'assets/images/'.$userId))
+		{
+			mkdir(FCPATH.'assets/images/'.$userId);
+		}
+		
+		$config['upload_path'] = FCPATH.'assets/images/'.$userId;
         $config['allowed_types'] = 'gif|jpg|png';
         $config['max_size'] = 2000;
         $config['max_width'] = 1500;
@@ -45,8 +64,9 @@ class AdminApi extends CI_Controller {
 		else
 		{
 			$imageData = array('image_metadata' => $this->upload->data());
+			// echo json_encode($imageData);
 			$product = array('category_id'=>$this->input->post('category_id'),
-						  'dist_id'=>$this->input->post('dist_id'),
+						//   'dist_id'=>$this->input->post('dist_id'),
 						  'product_name'=>$this->input->post('product_name'),
 						  'product_image'=>$imageData['image_metadata']['file_name'],
 						  'product_price'=>$this->input->post('product_price'),
@@ -71,11 +91,23 @@ class AdminApi extends CI_Controller {
 		$data['items'] = $this->AdminDatabase->deleteProduct($deleteId);
 		$this->load->view('API/json_data',$data);
 	}
+
+	public function categoryDetailsAddProduct()
+	{
+		$data['items'] = $this->AdminDatabase->categoryDetailsAddProduct();
+		$this->load->view('API/json_data',$data);
+	}
 	public function updateProduct()
 	{
 		$updateId = $this->input->post('id');
+		$userId = $this->input->post('userId');
 
-		$config['upload_path'] = './assets/images/';
+		if(!is_dir(FCPATH.'assets/images/'.$userId))
+		{
+			mkdir(FCPATH.'assets/images/'.$userId);
+		}
+		
+		$config['upload_path'] = FCPATH.'/assets/images/'.$userId;
         $config['allowed_types'] = 'gif|jpg|png';
         $config['max_size'] = 2000;
         $config['max_width'] = 1500;
@@ -85,6 +117,7 @@ class AdminApi extends CI_Controller {
 
 		if (!$this->upload->do_upload('product_image'))
 		{
+			
             // $error['items'] = array('error' => $this->upload->display_errors());
 
 			// $this->load->view('API/json_data', $error);
@@ -97,8 +130,16 @@ class AdminApi extends CI_Controller {
 							'min_discount'=>$this->input->post('min_discount'),
 							'product_tags'=>$this->input->post('product_tags')
 							);
-			$data['items'] = $this->AdminDatabase->updateProduct($updateId,$product);
-			$this->load->view('API/json_data',$data);
+			if($this->upload->display_errors() === "<p>You did not select a file to upload.</p>")
+			{
+				$data['items'] = $this->AdminDatabase->updateProduct($updateId,$product);
+				$this->load->view('API/json_data',$data);
+			}
+			else {
+				$data['items'] = array("status"=>$this->AdminDatabase->updateProduct($updateId,$product),
+									"error"=>$this->upload->display_errors());
+				$this->load->view('API/json_data',$data);
+			}
 		} 
 		else
 		{
@@ -141,6 +182,21 @@ class AdminApi extends CI_Controller {
 	{
 		$search =  $this->input->get('search');
 		$data['items'] = $this->AdminDatabase->searchCashFloat($search);
+		$this->load->view('API/json_data',$data);
+	}
+
+	public function getCouponDetails()
+	{
+		$data['items'] = $this->AdminDatabase->getCouponDetails();
+		$this->load->view('API/json_data',$data);
+	}
+
+	public function couponSubscribe()
+	{
+		$coupon = array('distributor_id'=>$this->input->post('userId'),
+						'coupon_id'=> $this->input->post('couponId')
+						);
+		$data['items'] = $this->AdminDatabase->couponSubscribe($coupon);
 		$this->load->view('API/json_data',$data);
 	}
 
