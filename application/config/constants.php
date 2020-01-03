@@ -2,6 +2,10 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /*
+    Save all The application Private Datas/ variables
+*/
+define('SALT_KEY', 'crypt4Bits');
+/*
 |--------------------------------------------------------------------------
 | Display Debug backtrace
 |--------------------------------------------------------------------------

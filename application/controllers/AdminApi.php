@@ -9,18 +9,40 @@ class AdminApi extends CI_Controller {
 		header("Access-Control-Allow-Headers: *");
         header('Access-Control-Allow-Credentials: true');    
 		header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-		$this->load->model('AdminDatabase');	
+		$this->load->model('AdminDatabase');
+		$this->authorization();	
 	}
 
-	public function index()
+	public function authorization()
 	{
-		// echo FCPATH.'assets/images';
-		// echo json_encode($this->input->request_headers()); //array of headers
 		$auth = $this->input->get_request_header('Authorization', true);
 		$auth = explode(':', $auth);
-		echo json_encode($auth);
-		// print_r( apache_request_headers());
-		
+		$response = array();
+		if( !empty($auth[0]) && !empty($auth[1]))
+		{
+			if($auth[0]=='loggedIn' && $auth[1]=='false')
+			{
+				return true;
+			}else {
+				// $GLOBALS['userId'] = $auth[0];
+				$userId = $auth[0];
+				$apiKey = $auth[1];
+				$salt = md5($userId.SALT_KEY);
+				if($salt == $apiKey){
+					return true;
+				}else {
+					die(json_encode(array('Api_Key_Error'=> true)));
+				}
+			}
+		}
+		else {
+			$response['Unauthorized'] = true;
+			die(json_encode($response));		
+		}
+	}
+	public function index()
+	{
+		echo $userId;
 	}
 
 	public function adminLogin()
@@ -79,14 +101,15 @@ class AdminApi extends CI_Controller {
 		}
 	}
 
-	public function deleteProduct()
+	public function deleteProduct($deleteId)
 	{
 		// echo json_encode($_GET);
-		$deleteId = $this->input->get('productId');
+		$userId = $this->input->post('userId');
+		// $deleteId = $this->input->get('productId');
 		$file = $this->input->post('delete_image');
 		// echo json_encode($file);
 		
-				unlink(FCPATH.'assets/images/'.$file);
+				unlink(FCPATH.'assets/images/'.$userId.'/'.$file);
 		
 		$data['items'] = $this->AdminDatabase->deleteProduct($deleteId);
 		$this->load->view('API/json_data',$data);
@@ -165,49 +188,65 @@ class AdminApi extends CI_Controller {
 		}
 	}
 	
-	public function searchProduct()
+	public function searchProduct($search="")
 	{
-		$search =  $this->input->get('search');
+		// $search =  $this->input->get('search');
 		$data['items'] = $this->AdminDatabase->searchProduct($search);
 		$this->load->view('API/json_data',$data);
 	}
 
-	public function searchOrder()
+	public function searchOrder($search="")
 	{
-		$search =  $this->input->get('search');
+		// $search =  $this->input->get('search');
 		$data['items'] = $this->AdminDatabase->searchOrder($search);
 		$this->load->view('API/json_data',$data);
 	}
-	public function searchCashFloat()
+	public function searchCashFloat($search="")
 	{
-		$search =  $this->input->get('search');
+		// $search =  $this->input->get('search');
 		$data['items'] = $this->AdminDatabase->searchCashFloat($search);
 		$this->load->view('API/json_data',$data);
 	}
 
 	public function getCouponDetails()
 	{
-		$data['items'] = $this->AdminDatabase->getCouponDetails();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->getCouponDetails($userId);
 		$this->load->view('API/json_data',$data);
 	}
 
 	public function couponSubscribe()
 	{
 		$coupon = array('distributor_id'=>$this->input->post('userId'),
-						'coupon_id'=> $this->input->post('couponId')
+						'coupon_id'=> $this->input->post('couponId'),
+						'status'=>1
 						);
-		$data['items'] = $this->AdminDatabase->couponSubscribe($coupon);
+		$couponVerify = array('distributor_id'=>$this->input->post('userId'),
+						'coupon_id'=> $this->input->post('couponId'),
+						);				
+		$data['items'] = $this->AdminDatabase->couponSubscribe($coupon,$couponVerify);
+		$this->load->view('API/json_data',$data);
+	}
+
+	public function couponUnsubscribe()
+	{
+
+		$couponVerify = array('distributor_id'=>$this->input->post('userId'),
+						'coupon_id'=> $this->input->post('couponId'),
+						);				
+		$data['items'] = $this->AdminDatabase->couponUnsubscribe($couponVerify);
 		$this->load->view('API/json_data',$data);
 	}
 
 	public function viewAllProducts()
 	{
-		$data['items'] = $this->AdminDatabase->viewAllProducts();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewAllProducts($userId);
 		$this->load->view('API/json_data',$data);
 	}
-	public function getProductToBeEdited()
+	public function getProductToBeEdited($productId)
 	{
-		$productId =  $this->input->get('productId');
+		// $productId =  $this->input->get('productId');
 		$data['items'] = $this->AdminDatabase->getProductToBeEdited($productId);
 		$this->load->view('API/json_data',$data);
 	}
@@ -218,62 +257,72 @@ class AdminApi extends CI_Controller {
 	}
 	public function totalNoOrders()
 	{
-		$data['items'] = $this->AdminDatabase->totalNoOrders();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->totalNoOrders($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function totalNoAcceptedOrders()
 	{
-		$data['items'] = $this->AdminDatabase->totalNoAcceptedOrders();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->totalNoAcceptedOrders($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function totalNoPendingOrders()
 	{
-		$data['items'] = $this->AdminDatabase->totalNoPendingOrders();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->totalNoPendingOrders($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function totalNoCancelledOrders()
 	{
-		$data['items'] = $this->AdminDatabase->totalNoCancelledOrders();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->totalNoCancelledOrders($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function viewAllOrders()
 	{
-		$data['items'] = $this->AdminDatabase->viewAllOrders();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewAllOrders($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function viewAcceptedOrders()
 	{
-		$data['items'] = $this->AdminDatabase->viewAcceptedOrders();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewAcceptedOrders($userId);
 		$this->load->view('API/json_data',$data);
 	}
 
 	public function viewCancelledOrders()
 	{
-		$data['items'] = $this->AdminDatabase->viewCancelledOrders();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewCancelledOrders($userId);
 		$this->load->view('API/json_data',$data);
 	}
 
 	public function viewPendingOrders()
 	{
-		$data['items'] = $this->AdminDatabase->viewPendingOrders();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewPendingOrders($userId);
 		$this->load->view('API/json_data',$data);
 	}
 
-	public function cancelOrder()
+	public function cancelOrder($orderId=1)
 	{
-		$orderId = $this->input->post('orderId');
-		$data['items'] = $this->AdminDatabase->cancelOrder($orderId);
+		// $orderId = $this->input->get('orderId');
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->cancelOrder($orderId, $userId);
 		$this->load->view('API/json_data',$data);
 	}
 
-	public function acceptOrder()
+	public function acceptOrder($orderId=1)
 	{
-		// $orderId = $this->input->post('orderId');
-		// $data['items'] = $this->AdminDatabase->acceptOrder($orderId);
-		$this->load->library('Pusher');
-		$data = "Hello World";
-		$pusher = $this->pusher->push($data);
-		// $this->load->view('API/json_data',$data);
+		// $this->load->library('Pusher');
+		// $data = "Your Order is Confirmed";
+		// $pusher = $this->pusher->push($data);
+		// $orderId = $this->input->get('orderId');
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->acceptOrder($orderId, $userId);
+		$this->load->view('API/json_data',$data);
 	}
 
 	public function push()
@@ -283,76 +332,88 @@ class AdminApi extends CI_Controller {
 
 	public function floatingCash()
 	{
-		$distId = $this->input->post('distId');
+		$distId = $this->input->post('userId');
 		$data['items'] = $this->AdminDatabase->floatingCash($distId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function totalNoFloatingCash()
 	{
-		$data['items'] = $this->AdminDatabase->totalNoFloatingCash();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->totalNoFloatingCash($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function totalNoSentFloatingCash()
 	{
-		$data['items'] = $this->AdminDatabase->totalNoSentFloatingCash();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->totalNoSentFloatingCash($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function totalNoPendingFloatingCash()
 	{
-		$data['items'] = $this->AdminDatabase->totalNoPendingFloatingCash();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->totalNoPendingFloatingCash($userId);
 		$this->load->view('API/json_data',$data);
 	}
 
 	public function totalNoReceivedFloatingCash()
 	{
-		$data['items'] = $this->AdminDatabase->totalNoReceivedFloatingCash();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->totalNoReceivedFloatingCash($userId);
 		$this->load->view('API/json_data',$data);
 	}
 
 	public function viewAllFloatingCash()
 	{
-		$data['items'] = $this->AdminDatabase->viewAllFloatingCash();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewAllFloatingCash($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function viewSentFloatingCash()
 	{
-		$data['items'] = $this->AdminDatabase->viewSentFloatingCash();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewSentFloatingCash($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function viewPendingFloatingCash()
 	{
-		$data['items'] = $this->AdminDatabase->viewPendingFloatingCash();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewPendingFloatingCash($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function viewReceivedFloatingCash()
 	{
-		$data['items'] = $this->AdminDatabase->viewReceivedFloatingCash();
+		$userId = $this->input->post('userId');
+		$data['items'] = $this->AdminDatabase->viewReceivedFloatingCash($userId);
 		$this->load->view('API/json_data',$data);
 	}
 	public function analytics()
 	{
         $startDate = $this->input->get('startDate');
-		$endDate = $this->input->get('endDate');	
-		$data['items'] = $this->AdminDatabase->analytics($startDate, $endDate);
+		$endDate = $this->input->get('endDate');
+		$userId = $this->input->get('userId');	
+		$data['items'] = $this->AdminDatabase->analytics($startDate, $endDate, $userId);
 		$this->load->view('API/json_data',$data);		
 	}
 
 	public function getNotifications()
 	{
-		$data['items'] = $this->AdminDatabase-> getNotifications();
+		$userId = $this->input->post('userId');	
+		$data['items'] = $this->AdminDatabase-> getNotifications($userId);
 		$this->load->view('API/json_data',$data);
 	}
 
 	public function viewMoreNotifications()
 	{
-		$data['items'] = $this->AdminDatabase-> viewMoreNotifications();
+		$userId = $this->input->post('userId');	
+		$data['items'] = $this->AdminDatabase-> viewMoreNotifications($userId);
 		$this->load->view('API/json_data',$data);
 	}
 
-	public function updateNotificationStatus()
+	public function updateNotificationStatus($notificationId=1)
 	{
-		$notificationId = $this->input->get('id');
-		$data['items'] = $this->AdminDatabase-> updateNotificationStatus($notificationId);
+		$userId = $this->input->post('userId');	
+		// $notificationId = $this->input->get('id');
+		$data['items'] = $this->AdminDatabase-> updateNotificationStatus($notificationId,$userId);
 		$this->load->view('API/json_data',$data);
 	}
 }

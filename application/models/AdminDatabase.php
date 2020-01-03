@@ -7,11 +7,13 @@ class AdminDatabase extends CI_Model {
     { 
         $this->db->trans_start();
                             $this->db->select('id');
-            $loginStatus = $this->db->get_where('admin',$loginDetails)->result();
+            $loginId = $this->db->get_where('admin',$loginDetails)->result();
         $this->db->trans_complete();
-        if($loginStatus)
+        if(sizeof($loginId)>0)
         {
-            return $loginStatus;
+            $apiKey = md5($loginId[0]->id.SALT_KEY);
+            $response = array('userId'=>$loginId[0]->id, 'apiKey'=>$apiKey);
+            return $response;
         }
         else
         {
@@ -129,18 +131,22 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function getCouponDetails()
+    public function getCouponDetails($userId)
     {
         $this->db->trans_start();
             $this->db->select('*');
             $this->db->order_by('time_stamp','DESC');
             $totalNo = $this->db->get('coupon')->result_array();
+            $this->db->select('*');
+            $this->db->where('status',1)->where('distributor_id',$userId);
+            $subscribedCoupon = $this->db->get('distributor_coupon_subscription')->result_array();
+            $result = array('totalNo'=>$totalNo,'subscribedCoupon'=>$subscribedCoupon);
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
         {
             if($totalNo)
             {
-                return $totalNo;
+                return $result;
             }
             else
             {
@@ -153,10 +159,21 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function couponSubscribe($coupon)
+    public function couponSubscribe($coupon,$couponVerify)
     {
         $this->db->trans_start();
-            $this->db->insert('distributor_coupon_subscription',$coupon);
+            
+            // $this->db->where($couponVerify);
+            $this->db->get_where('distributor_coupon_subscription',$couponVerify);
+            if($this->db->affected_rows()>0){
+                $this->db->where($couponVerify);
+                $this->db->set('status',1);
+                $this->db->update('distributor_coupon_subscription');
+            }
+            else{
+                $this->db->insert('distributor_coupon_subscription',$coupon);
+
+            }
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
         {
@@ -165,6 +182,25 @@ class AdminDatabase extends CI_Model {
         else
         {
             return ["error"=>"Coupon Subscription Failed"];
+        }
+    }
+
+    public function couponUnsubscribe($couponVerify)
+    {
+        $this->db->trans_start();
+            
+            $this->db->where($couponVerify);
+            $this->db->set('status',0);
+            $this->db->update('distributor_coupon_subscription');
+       
+        $this->db->trans_complete();
+        if($this->db->trans_status() === true)
+        {
+            return ["error"=>"Coupon UnSubscribed"];
+        }
+        else
+        {
+            return ["error"=>"Coupon UnSubscription Failed"];
         }
     }
 
@@ -191,10 +227,11 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function totalNoOrders()
+    public function totalNoOrders($userId)
     {
         $this->db->trans_start();
             $this->db->select('*');
+            $this->db->where('dist_id',$userId);
             $totalNo = $this->db->get('customer_order')->num_rows();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -213,11 +250,11 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"get total no. orders Failed"];
         }
     }
-    public function totalNoAcceptedOrders()
+    public function totalNoAcceptedOrders($userId)
     {
         $this->db->trans_start();
             $this->db->select('*');
-            $this->db->where('Accepted','true');
+            $this->db->where('Accepted','true')->where('dist_id',$userId);
             $totalNo = $this->db->get('customer_order')->num_rows();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -236,13 +273,13 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"get total no. Accepted orders Failed"];
         }
     }
-    public function totalNoPendingOrders()
+    public function totalNoPendingOrders($userId)
     {
         $whereClause = array('Accepted'=>'false',
         'Cancelled'=>'false');
         $this->db->trans_start();
             $this->db->select('*');
-            $this->db->where($whereClause);
+            $this->db->where($whereClause)->where('dist_id',$userId);
             $totalNo = $this->db->get('customer_order')->num_rows();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -261,11 +298,11 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"get total no. Pending orders Failed"];
         }
     }
-    public function totalNoCancelledOrders()
+    public function totalNoCancelledOrders($userId)
     {
         $this->db->trans_start();
             $this->db->select('*');
-            $this->db->where('Cancelled','true');
+            $this->db->where('Cancelled','true')->where('dist_id',$userId);
             $totalNo = $this->db->get('customer_order')->num_rows();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -373,11 +410,11 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function totalNoSentFloatingCash()
+    public function totalNoSentFloatingCash($userId)
     {
         $this->db->trans_start();
             $this->db->select('*');
-            $this->db->where('hub_status','Amount Sent');
+            $this->db->where('hub_status','Amount Sent')->where('dist_id',$userId);
             $totalNo = $this->db->get('floating_cash')->num_rows();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -396,11 +433,11 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"get total no. sent Floatingcash Failed"];
         }
     }
-    public function totalNoPendingFloatingCash()
+    public function totalNoPendingFloatingCash($userId)
     {
         $this->db->trans_start();
             $this->db->select('*');
-            $this->db->where('hub_status','Pending');
+            $this->db->where('hub_status','Pending')->where('dist_id',$userId);
             $totalNo = $this->db->get('floating_cash')->num_rows();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -419,11 +456,11 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"get total no. Pending Floatingcash Failed"];
         }
     }
-    public function totalNoReceivedFloatingCash()
+    public function totalNoReceivedFloatingCash($userId)
     {
         $this->db->trans_start();
             $this->db->select('*');
-            $this->db->where('hub_status','Amount Received');
+            $this->db->where('hub_status','Amount Received')->where('dist_id',$userId);
             $totalNo = $this->db->get('floating_cash')->num_rows();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -443,10 +480,11 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function totalNoFloatingCash()
+    public function totalNoFloatingCash($userId)
     {
         $this->db->trans_start();
             $this->db->select('*');
+            $this->db->where('dist_id',$userId);
             $totalNo = $this->db->get('floating_cash')->num_rows();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -465,7 +503,7 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"get total no. floating cash Failed"];
         }
     }
-    public function viewReceivedFloatingCash()
+    public function viewReceivedFloatingCash($userId)
     {
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
         $noOfValue = 8;
@@ -475,7 +513,7 @@ class AdminDatabase extends CI_Model {
                                  ->from('floating_cash')
                                  ->order_by('time_stamp', 'DESC')
                                  ->limit($noOfValue, $offset)
-                                 ->where('hub_status','Amount Received')
+                                 ->where('hub_status','Amount Received')->where('dist_id',$userId)
                                  ->get()
                                  ->result_array();
         $this->db->trans_complete();
@@ -495,7 +533,7 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"View Received Floatingcash  Failed"];
         }
     }
-    public function viewPendingFloatingCash()
+    public function viewPendingFloatingCash($userId)
     {
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
         $noOfValue = 8;
@@ -505,7 +543,7 @@ class AdminDatabase extends CI_Model {
                                  ->from('floating_cash')
                                  ->order_by('time_stamp', 'DESC')
                                  ->limit($noOfValue, $offset)
-                                 ->where('hub_status','Pending')
+                                 ->where('hub_status','Pending')->where('dist_id',$userId)
                                  ->get()
                                  ->result_array();
         $this->db->trans_complete();
@@ -526,7 +564,7 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function viewSentFloatingCash()
+    public function viewSentFloatingCash($userId)
     {
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
         $noOfValue = 8;
@@ -536,7 +574,7 @@ class AdminDatabase extends CI_Model {
                                  ->from('floating_cash')
                                  ->order_by('time_stamp', 'DESC')
                                  ->limit($noOfValue, $offset)
-                                 ->where('hub_status','Amount Sent')
+                                 ->where('hub_status','Amount Sent')->where('dist_id',$userId)
                                  ->get()
                                  ->result_array();
         $this->db->trans_complete();
@@ -556,7 +594,7 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"View sent Floatingcash  Failed"];
         }
     }
-    public function viewAllFloatingCash()
+    public function viewAllFloatingCash($userId)
     {
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
         $noOfValue = 8;
@@ -566,6 +604,7 @@ class AdminDatabase extends CI_Model {
                                  ->from('floating_cash')
                                  ->order_by('time_stamp', 'DESC')
                                  ->limit($noOfValue, $offset)
+                                 ->where('dist_id',$userId)
                                  ->get()
                                  ->result_array();
         $this->db->trans_complete();
@@ -585,7 +624,7 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"View All Floating cash Failed"];
         }
     }
-    public function viewAllProducts()
+    public function viewAllProducts($userId)
     {
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
         $noOfValue = 8;
@@ -597,7 +636,7 @@ class AdminDatabase extends CI_Model {
                                  ->get()
                                  ->result_array();
         $this->db->trans_complete();
-        $url = "http://localhost/Admin/assets/images/";
+        $url = "http://localhost/Admin/assets/images/".$userId."/";
         foreach($allProducts as &$product) {
             $product['product_image'] = $url.$product['product_image'];
         }
@@ -617,7 +656,7 @@ class AdminDatabase extends CI_Model {
             return ["error"=>"View All Products Failed"];
         }
     }
-    public function viewAllOrders()
+    public function viewAllOrders($userId)
     {
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
         $noOfValue = 8;
@@ -626,6 +665,7 @@ class AdminDatabase extends CI_Model {
             $allOrder = $this->db->select('*')
                                  ->from('customer_order')
                                  ->order_by('time_stamp', 'DESC')
+                                 ->where('dist_id',$userId)
                                  ->limit($noOfValue, $offset)
                                  ->get()
                                  ->result_array();
@@ -647,7 +687,7 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function viewAcceptedOrders()
+    public function viewAcceptedOrders($userId)
     {
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
         $noOfValue = 8;
@@ -657,7 +697,7 @@ class AdminDatabase extends CI_Model {
                                  ->from('customer_order')
                                  ->order_by('time_stamp', 'DESC')
                                  ->limit($noOfValue, $offset)
-                                 ->where('Accepted','true')
+                                 ->where('Accepted','true')->where('dist_id',$userId)
                                  ->get()
                                  ->result_array();
         $this->db->trans_complete();
@@ -678,7 +718,7 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function viewCancelledOrders()
+    public function viewCancelledOrders($userId)
 	{
         $pageNo = $this->input->get('page') ? $this->input->get('page') : 1;
         $noOfValue = 8;
@@ -688,7 +728,7 @@ class AdminDatabase extends CI_Model {
                                  ->from('customer_order')
                                  ->order_by('time_stamp', 'DESC')
                                  ->limit($noOfValue, $offset)
-                                 ->where('Cancelled','true')
+                                 ->where('Cancelled','true')->where('dist_id',$userId)
                                  ->get()
                                  ->result_array();
         $this->db->trans_complete();
@@ -710,7 +750,7 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function viewPendingOrders()
+    public function viewPendingOrders($userId)
     {
         $whereClause = array('Accepted'=>'false',
                             'Cancelled'=>'false');
@@ -722,7 +762,7 @@ class AdminDatabase extends CI_Model {
                                     ->from('customer_order')
                                     ->order_by('time_stamp', 'DESC')
                                     ->limit($noOfValue, $offset)
-                                    ->where($whereClause)
+                                    ->where($whereClause)->where('dist_id',$userId)
                                     ->get()
                                     ->result_array();
         $this->db->trans_complete();
@@ -744,10 +784,10 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function cancelOrder($orderId)
+    public function cancelOrder($orderId, $userId)
     {
         $this->db->trans_start();
-            $this->db->where('id',$orderId);
+            $this->db->where('id',$orderId)->where('dist_id',$userId);
             $this->db->set('Cancelled','true');
             $this->db->set('Accepted', 'false');
             $this->db->update('customer_order');
@@ -762,10 +802,10 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function acceptOrder($orderId)
+    public function acceptOrder($orderId, $userId)
     {
         $this->db->trans_start();
-            $this->db->where('id',$orderId);
+            $this->db->where('id',$orderId)->where('dist_id',$userId);
             $this->db->set('Accepted','true');
             $this->db->set('Cancelled','false');
             $this->db->update('customer_order');
@@ -780,10 +820,10 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function getNotifications()
+    public function getNotifications($userId)
     {
         $this->db->trans_start();
-            $this->db->where('received_status','false');
+            $this->db->where('received_status','false')->where('dist_id',$userId);
             $this->db->order_by('time_stamp','DESC');
             $this->db->limit(5, 0);
             $notifications = $this->db->get('notification')->result_array();
@@ -805,11 +845,12 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function viewMoreNotifications()
+    public function viewMoreNotifications($userId)
     {
         $this->db->trans_start();
             $this->db->order_by('time_stamp','DESC');
             $this->db->limit(20, 0);
+            $this->db->where('dist_id',$userId);
             $notifications = $this->db->get('notification')->result_array();
         $this->db->trans_complete();
         if($this->db->trans_status() === true)
@@ -829,10 +870,10 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function updateNotificationStatus($notificationId)
+    public function updateNotificationStatus($notificationId,$userId)
     {
         $this->db->trans_start();
-            $this->db->where('id',$notificationId);
+            $this->db->where('id',$notificationId)->where('dist_id',$userId);
             $this->db->set('received_status','true');
             $this->db->update('notification');
         $this->db->trans_complete();
@@ -846,13 +887,13 @@ class AdminDatabase extends CI_Model {
         }
     }
 
-    public function analytics($startDate, $endDate)
+    public function analytics($startDate, $endDate, $userId)
     {
         $lineChart = array();
         $pieChart = array();
 
         $result = $this->db->select('*')
-                    ->where(' time_stamp BETWEEN "'.$startDate.'" AND "'.$endDate.'"')
+                    ->where(' time_stamp BETWEEN "'.$startDate.'" AND "'.$endDate.'"')->where('dist_id',$userId)
                     ->order_by('time_stamp','ASC')
                     ->get('customer_order')
                     ->result_array();
